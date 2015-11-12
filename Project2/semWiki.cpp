@@ -5,9 +5,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <semaphore.h>
-#include <vector>
+#include <string>
 
-#define DEBUG 1
 //#define MIN_TIME 2
 //#define MAX_THINK 10
 //#define MAX_EAT 5 
@@ -16,9 +15,53 @@
 #define MAX_EAT 2
 
 static int MAX_ITERS = 3;
+int DEBUG = 0; //  Toggle for debug messages. Don't enable with OUTPUT or it will be messy!
+int OUTPUT;
 int NUM_FORKS;
 int NUM_DINERS;
 sem_t* forkArray; // array of fork semaphore pointers
+sem_t access_activity;  // Binary semaphore to access the output function
+
+void print_header(int num_philosophers)
+{
+    std::cout << "Eating Activity" << std::endl;
+    std::string tens("          "); //Ten blank spaces
+    int num_digits = NUM_DINERS - 10;
+    //Display tens place digits
+    if(NUM_DINERS > 10)
+    {
+        //std::cout << space;
+        for(int idx=0; idx<num_digits; idx++)
+        {
+            tens += "1";
+        }
+        std::cout << tens << std::endl;
+    }
+    //Display ones place digits
+    int one_digit = NUM_DINERS > 10 ? 10 : NUM_DINERS;
+    for(int idx=0; idx<one_digit; idx++)
+    {
+        std::cout << idx;
+
+    }
+    if(NUM_DINERS <= 10)
+    {
+        std::cout << std::endl;
+    }
+    if(NUM_DINERS > 10)
+    {
+        for(int idx=0; idx<num_digits; idx++)
+        {
+            std::cout << idx;
+        }
+        std::cout << std::endl;
+    }
+}
+
+void print_activity(int thread_id)
+{
+
+}
 
 void *perform_work(void *argument)
 {
@@ -63,6 +106,7 @@ int main(void)
 {
     std::cout << "Enter number of philosophers from 1 to 15" << std::endl;
     std::cin >> NUM_DINERS;
+    print_header(NUM_DINERS);
     //Initialize forks as binary semaphores
     if(NUM_DINERS > 1)
     {
@@ -104,7 +148,8 @@ int main(void)
             printf("In main: thread %d has completed\n", index);
         assert(0 == result_code);
     } 
-    printf("In main: All threads completed successfully\n");
+    std::cout << "In main: All threads completed successfully\n" << std::endl;
+    //printf("In main: All threads completed successfully\n");
     exit(EXIT_SUCCESS);
 }
 
