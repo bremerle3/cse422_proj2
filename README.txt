@@ -9,6 +9,10 @@ The makefile comes with two targets, a PHONY clean target to remove
 outdated binaries and a target to build prog2. Usage:
 	make clean	<----- Cleans up old binaries    
 	make prog2	<----- Compiles prog2.cpp into runnnable object file prog2.o
+In addition, there are two global variables inside prog2.cpp which determine the output of the
+program. Setting OUTPUT to 1 will cause the program to display the information requested by the 
+assignment PDF. Setting DEBUG to 1 will instead display debug messages about the behavior of the
+threads. Do not set both to 1 simultaneously or your terminal will look very messy!
 
 PROBLEM STATEMENT
 

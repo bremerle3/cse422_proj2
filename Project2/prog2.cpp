@@ -120,7 +120,7 @@ void *philosophize(void *argument)
         {
             sem_wait(&forkArray[(passed_in_value + 1) % NUM_FORKS]); 
         }
-        else if (NUM_DINERS == 1)
+        else if (NUM_DINERS == 1) //If there is only one philosopher, second fork is always 1
         {
             sem_wait(&forkArray[1]); 
         } 
