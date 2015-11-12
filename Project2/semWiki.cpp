@@ -7,20 +7,23 @@
 #include <semaphore.h>
 #include <string>
 
-//#define MIN_TIME 2
-//#define MAX_THINK 10
-//#define MAX_EAT 5 
-#define MIN_TIME 1
-#define MAX_THINK 2
-#define MAX_EAT 2
+#define MIN_TIME 2
+#define MAX_THINK 10
+#define MAX_EAT 5 
+//#define MIN_TIME 1
+//#define MAX_THINK 2
+//#define MAX_EAT 2
 
 static int MAX_ITERS = 3;
+static int EATING = 1;
+static int NOT_EATING = 0;
 int DEBUG = 0; //  Toggle for debug messages. Don't enable with OUTPUT or it will be messy!
-int OUTPUT;
+int OUTPUT = 1;
 int NUM_FORKS;
 int NUM_DINERS;
 sem_t* forkArray; // array of fork semaphore pointers
 sem_t access_activity;  // Binary semaphore to access the output function
+int* activityArray;  //  Keeps track of the status of each philosopher
 
 void print_header(int num_philosophers)
 {
@@ -58,9 +61,34 @@ void print_header(int num_philosophers)
     }
 }
 
-void print_activity(int thread_id)
+void print_activity(int thread_id, int status)
 {
-
+    activityArray[thread_id] = status;
+    //If OUTPUT is set high, display status
+    if(OUTPUT == 1)
+    {
+        for(int idx=0; idx<NUM_DINERS; idx++)
+        {
+            if(activityArray[idx] == 0)
+            {
+                std::cout << " ";
+            }
+            else if (activityArray[idx] == 1)
+            {
+                std::cout << "*";
+            }
+        }
+        std::cout << "      ";  //Six spaces
+        if(status == EATING)
+        {
+            std::cout << thread_id << " starts eating";
+        }
+        else if (status == NOT_EATING)
+        {
+            std::cout << thread_id << " ends eating";
+        }
+        std::cout << std::endl;
+    }
 }
 
 void *perform_work(void *argument)
@@ -87,6 +115,10 @@ void *perform_work(void *argument)
         {
             sem_wait(&forkArray[1]); 
         } 
+        //Protect calls to print_activity with access_activity semaphore
+        sem_wait(&access_activity);
+        print_activity(passed_in_value, EATING);
+        sem_post(&access_activity);
         if(DEBUG)
             printf("%d Eating\n", passed_in_value);
         int eatTime = MIN_TIME + ( rand() % (MAX_EAT - MIN_TIME));
@@ -95,6 +127,10 @@ void *perform_work(void *argument)
         sleep(eatTime);
         sem_post(&forkArray[passed_in_value % NUM_FORKS]);
         sem_post(&forkArray[(passed_in_value + 1) % NUM_FORKS]);
+        //Protect calls to print_activity with access_activity semaphore
+        sem_wait(&access_activity);
+        print_activity(passed_in_value, NOT_EATING);
+        sem_post(&access_activity);
         if(DEBUG)
             printf("%d Finished Eating\n",passed_in_value);
         count++;
@@ -106,7 +142,15 @@ int main(void)
 {
     std::cout << "Enter number of philosophers from 1 to 15" << std::endl;
     std::cin >> NUM_DINERS;
-    print_header(NUM_DINERS);
+    //If we are outputting status to the terminal, print the header now
+    if(OUTPUT == 1)
+        print_header(NUM_DINERS);
+    //Set the status of all philosophers to "NOT_EATING"
+    activityArray = new int[NUM_DINERS];
+    for(int idx=0; idx<NUM_DINERS; idx++)
+    {
+        activityArray[idx] = NOT_EATING;
+    }
     //Initialize forks as binary semaphores
     if(NUM_DINERS > 1)
     {
@@ -123,11 +167,13 @@ int main(void)
         std::cout << "Error with NUM_DINERS" << std::endl;
         exit(EXIT_FAILURE);
     }
+    //Initialize the fork semaphores
     for(int idx=0; idx<NUM_FORKS; idx++)
     {
-
         sem_init(&forkArray[idx], 0, 1);
     }
+    //Set up the array semaphore as a mutex
+    sem_init(&access_activity, 0, 1);
     //Set up the threads
     pthread_t threads[NUM_DINERS];
     int thread_args[NUM_DINERS];
@@ -148,9 +194,8 @@ int main(void)
             printf("In main: thread %d has completed\n", index);
         assert(0 == result_code);
     } 
-    std::cout << "In main: All threads completed successfully\n" << std::endl;
-    //printf("In main: All threads completed successfully\n");
-    exit(EXIT_SUCCESS);
+    std::cout << "In main: All threads completed successfully!\n" << std::endl;
+    return 0;
 }
 
 
