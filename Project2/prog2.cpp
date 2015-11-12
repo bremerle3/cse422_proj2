@@ -7,24 +7,24 @@
 #include <semaphore.h>
 #include <string>
 
+//Randon number generator bounds for thinking and eating (in seconds)
 #define MIN_TIME 2
 #define MAX_THINK 10
 #define MAX_EAT 5 
-//#define MIN_TIME 1
-//#define MAX_THINK 2
-//#define MAX_EAT 2
 
-static int MAX_ITERS = 3;
-static int EATING = 1;
+static int MAX_ITERS = 3; //Number of eat/think cycles for each philosopher
+static int EATING = 1; 
 static int NOT_EATING = 0;
-int DEBUG = 0; //  Toggle for debug messages. Don't enable with OUTPUT or it will be messy!
-int OUTPUT = 1;
-int NUM_FORKS;
-int NUM_DINERS;
-sem_t* forkArray; // array of fork semaphore pointers
-sem_t access_activity;  // Binary semaphore to access the output function
-int* activityArray;  //  Keeps track of the status of each philosopher
+int DEBUG = 0; //Toggle for debug messages. Don't enable with OUTPUT or it will be messy!
+int OUTPUT = 1; //Toggle for status output. Don't enable with DEBUG or it will be messy!
+int NUM_FORKS; //Number of forks (semaphores)
+int NUM_DINERS; //Number of philosophers (threads)
+sem_t* forkArray; //Array of semaphores for the forks (set dynamically by user input)
+sem_t access_activity;  //Binary semaphore to protect reads/writes to the activityArray
+int* activityArray;  //Global array to keep track of the status of each philosopher
 
+/*Prints the header, as displayed in the assignment documentation.
+ */
 void print_header(int num_philosophers)
 {
     std::cout << "Eating Activity" << std::endl;
@@ -44,7 +44,6 @@ void print_header(int num_philosophers)
     for(int idx=0; idx<one_digit; idx++)
     {
         std::cout << idx;
-
     }
     if(NUM_DINERS <= 10)
     {
@@ -60,6 +59,9 @@ void print_header(int num_philosophers)
     }
 }
 
+/*Prints the status of each philosopher in the activityArray.
+ * An asterisk indicates eating, blank space indicates thinking.
+ */
 void print_activity(int thread_id, int status)
 {
     activityArray[thread_id] = status;
@@ -77,7 +79,7 @@ void print_activity(int thread_id, int status)
                 std::cout << "*";
             }
         }
-        std::cout << "      ";  //Six spaces
+        std::cout << "      ";  
         if(status == EATING)
         {
             std::cout << thread_id << " starts eating";
@@ -90,7 +92,15 @@ void print_activity(int thread_id, int status)
     }
 }
 
-void *perform_work(void *argument)
+/* The philosophers are either thinking or eating. In order to each they
+ * must pick up the two forks that are adjacent to them. I implemented Havender's
+ * algorithm to avoid deadlock and starvation. This algorithm imposes an ordering
+ * that the philosopher's must obey when they try to pick up forks. In this 
+ * implementation, the philosophers always try to pick up the fork with the 
+ * lower order, ensuring that at least one philosopher will always have access
+ * to two forks.
+ */
+void *philosophize(void *argument)
 {
     int passed_in_value;
     passed_in_value = *((int *) argument);
@@ -174,21 +184,20 @@ int main(void)
     //Set up the array semaphore as a mutex
     sem_init(&access_activity, 0, 1);
     //Set up the threads
-    pthread_t threads[NUM_DINERS];
+    pthread_t philosophers[NUM_DINERS];
     int thread_args[NUM_DINERS];
     int result_code, index;
-    // create all threads one by one
-    for (index = 0; index < NUM_DINERS; ++index) {
+    for (index = 0; index < NUM_DINERS; index++) {
         thread_args[index] = index;
         if(DEBUG)
             printf("In main: creating thread %d\n", index);
-        result_code = pthread_create(&threads[index], NULL, perform_work, (void *) &thread_args[index]);
+        result_code = pthread_create(&philosophers[index], NULL, philosophize, (void *) &thread_args[index]);
         assert(0 == result_code);
     }
     // wait for each thread to complete
-    for (index = 0; index < NUM_DINERS; ++index) {
+    for (index = 0; index < NUM_DINERS; index++) {
         // block until thread 'index' completes
-        result_code = pthread_join(threads[index], NULL);
+        result_code = pthread_join(philosophers[index], NULL);
         if(DEBUG)
             printf("In main: thread %d has completed\n", index);
         assert(0 == result_code);
@@ -196,6 +205,7 @@ int main(void)
     std::cout << "In main: All threads completed successfully!\n" << std::endl;
     return 0;
 }
+
 
 
 
